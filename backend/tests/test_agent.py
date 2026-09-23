@@ -142,3 +142,25 @@ async def test_service_case_auto_links_deal_and_contact():
     assert record["Contact_Name"]["id"] == "CON-1001" or "1427144" in str(record["Contact_Name"])
     assert record["Account_Name"]["id"] == "ACC-1001" or "1427144" in str(record["Account_Name"])
     assert record["Priority"] == "High"
+
+
+def test_rate_limiter_hourly_cap_and_byok():
+    """Verify that after 30 requests/hr, system enforces BYOK custom key."""
+    from api.server import RateLimiter
+    limiter = RateLimiter(max_requests=30, window_seconds=3600)
+
+    for i in range(30):
+        allowed, used, remaining = limiter.check_and_record(has_custom_key=False)
+        assert allowed is True
+        assert used == i + 1
+        assert remaining == 30 - (i + 1)
+
+    # 31st request with shared key is blocked
+    allowed, used, remaining = limiter.check_and_record(has_custom_key=False)
+    assert allowed is False
+    assert remaining == 0
+
+    # User bringing their own key bypasses the cap immediately
+    allowed, used, remaining = limiter.check_and_record(has_custom_key=True)
+    assert allowed is True
+

@@ -20,24 +20,31 @@ if ! docker info >/dev/null 2>&1; then
     exit 1
 fi
 
-# 2. Build backend
+# 2. Build React production bundle and copy to backend/static_dist
 echo ""
-echo "--> [1/4] Building Backend image (${BACKEND_TAG})..."
+echo "--> [1/5] Building React production assets for unified serving..."
+(cd frontend && npm run build)
+mkdir -p backend/static_dist
+cp -r frontend/dist/* backend/static_dist/
+
+# 3. Build backend image
+echo ""
+echo "--> [2/5] Building Backend image (${BACKEND_TAG})..."
 docker build -t "${BACKEND_TAG}" ./backend
 
-# 3. Build frontend
+# 4. Build frontend image
 echo ""
-echo "--> [2/4] Building Frontend image (${FRONTEND_TAG})..."
+echo "--> [3/5] Building Frontend image (${FRONTEND_TAG})..."
 docker build -t "${FRONTEND_TAG}" ./frontend
 
-# 4. Push backend
+# 5. Push backend image
 echo ""
-echo "--> [3/4] Pushing Backend image to Docker Hub..."
+echo "--> [4/5] Pushing Backend image to Docker Hub..."
 docker push "${BACKEND_TAG}"
 
-# 5. Push frontend
+# 6. Push frontend image
 echo ""
-echo "--> [4/4] Pushing Frontend image to Docker Hub..."
+echo "--> [5/5] Pushing Frontend image to Docker Hub..."
 docker push "${FRONTEND_TAG}"
 
 echo ""

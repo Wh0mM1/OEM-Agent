@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Sparkles, Layers, ShieldCheck, Database, Menu } from 'lucide-react';
+import { Send, Sparkles, Layers, ShieldCheck, Database, Menu, Key } from 'lucide-react';
 import { ChatMessage, ChatThread, StageType } from './types';
 import Sidebar from './components/Sidebar';
 import ChatMessageView from './components/ChatMessageView';
 import EmptyState from './components/EmptyState';
 import CrmDrawer from './components/CrmDrawer';
+import KeySettingsModal from './components/KeySettingsModal';
 
 const STORAGE_KEY = 'mahindra_agent_threads_v1';
+const API_KEY_STORAGE = 'mahindra_openrouter_key';
+const MODEL_STORAGE = 'mahindra_openrouter_model';
 
 export default function App() {
   const [threads, setThreads] = useState<ChatThread[]>(() => {
@@ -31,7 +34,16 @@ export default function App() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Custom User OpenRouter Key & Model (BYOK)
+  const [userApiKey, setUserApiKey] = useState<string>(() => {
+    return localStorage.getItem(API_KEY_STORAGE) || '';
+  });
+  const [userModel, setUserModel] = useState<string>(() => {
+    return localStorage.getItem(MODEL_STORAGE) || 'nvidia/nemotron-3-ultra-550b-a55b:free';
+  });
 
   const activeThread = threads.find((t) => t.id === activeThreadId) || threads[0];
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -48,6 +60,26 @@ export default function App() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeThread?.messages, isLoading]);
+
+  const handleSaveKey = (key: string, model: string) => {
+    setUserApiKey(key);
+    setUserModel(model);
+    if (key) {
+      localStorage.setItem(API_KEY_STORAGE, key);
+    } else {
+      localStorage.removeItem(API_KEY_STORAGE);
+    }
+    if (model) {
+      localStorage.setItem(MODEL_STORAGE, model);
+    } else {
+      localStorage.removeItem(MODEL_STORAGE);
+    }
+  };
+
+  const handleClearKey = () => {
+    setUserApiKey('');
+    localStorage.removeItem(API_KEY_STORAGE);
+  };
 
   const handleNewThread = () => {
     const newId = `thread_${Date.now()}`;
@@ -117,11 +149,18 @@ export default function App() {
           message: textToSend,
           thread_id: activeThread.id,
           session_id: activeThread.id,
+          openrouter_key: userApiKey || undefined,
+          openrouter_model: userModel || undefined,
         }),
       });
 
       const data = await res.json();
       const detectedStage: StageType = data.active_stage || 'new_lead';
+
+      // If hourly shared limit reached, trigger custom key modal
+      if (data.requires_custom_key) {
+        setIsKeyModalOpen(true);
+      }
 
       const agentMessage: ChatMessage = {
         id: `agt-${Date.now()}`,
@@ -201,12 +240,26 @@ export default function App() {
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {/* Active Stage Badge */}
             <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${stageInfo.color}`}>
               <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse"></span>
               <span>{stageInfo.name}</span>
             </div>
+
+            {/* BYOK / API Key Trigger */}
+            <button
+              onClick={() => setIsKeyModalOpen(true)}
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                userApiKey
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                  : 'border-slate-800 bg-slate-900/80 text-slate-300 hover:bg-slate-800 hover:text-white'
+              }`}
+              title={userApiKey ? 'Using Custom OpenRouter Key' : 'OpenRouter API Key (BYOK)'}
+            >
+              <Key className={`h-3.5 w-3.5 ${userApiKey ? 'text-emerald-400' : 'text-rose-400'}`} />
+              <span>{userApiKey ? 'Custom Key Active' : 'API Key / Quota'}</span>
+            </button>
 
             {/* CRM Drawer Trigger */}
             <button
@@ -281,6 +334,16 @@ export default function App() {
 
       {/* Slide-out CRM Inspector Drawer */}
       <CrmDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+
+      {/* OpenRouter API Key Settings Modal (BYOK) */}
+      <KeySettingsModal
+        isOpen={isKeyModalOpen}
+        onClose={() => setIsKeyModalOpen(false)}
+        apiKey={userApiKey}
+        model={userModel}
+        onSave={handleSaveKey}
+        onClear={handleClearKey}
+      />
     </div>
   );
 }

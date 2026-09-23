@@ -15,6 +15,14 @@ from agent.llm import get_llm
 from data.vehicle_db import vehicle_db
 from zoho.service import zoho_service
 
+
+def _get_node_llm(state: AgentState):
+    return get_llm(
+        custom_key=state.get("custom_llm_key"),
+        custom_model=state.get("custom_llm_model"),
+    )
+
+
 COMMON_CITIES = [
     "mumbai", "delhi", "pune", "bangalore", "bengaluru", "hyderabad",
     "chennai", "kolkata", "ahmedabad", "thane", "noida", "gurgaon",
@@ -205,7 +213,7 @@ async def classify_intent_node(state: AgentState) -> Dict[str, Any]:
         }
 
     # LLM fallback classification
-    llm = get_llm()
+    llm = _get_node_llm(state)
     messages = [
         SystemMessage(content=CLASSIFIER_SYSTEM_PROMPT),
         HumanMessage(content=f"Classify this user message: '{last_user_message}'"),
@@ -328,7 +336,7 @@ async def new_lead_node(state: AgentState) -> Dict[str, Any]:
     )
     messages = [SystemMessage(content=sys_prompt)] + list(state["messages"])
 
-    llm = get_llm()
+    llm = _get_node_llm(state)
     response = await llm.ainvoke(messages)
     content = str(response.content).strip()
 
@@ -412,7 +420,7 @@ async def pipeline_node(state: AgentState) -> Dict[str, Any]:
     )
     messages = [SystemMessage(content=sys_prompt)] + list(state["messages"])
 
-    llm = get_llm()
+    llm = _get_node_llm(state)
     response = await llm.ainvoke(messages)
     content = str(response.content).strip()
 
@@ -460,7 +468,7 @@ async def booked_node(state: AgentState) -> Dict[str, Any]:
     )
     messages = [SystemMessage(content=sys_prompt)] + list(state["messages"])
 
-    llm = get_llm()
+    llm = _get_node_llm(state)
     response = await llm.ainvoke(messages)
     content = str(response.content).strip()
 
@@ -612,7 +620,7 @@ async def service_node(state: AgentState) -> Dict[str, Any]:
     )
     messages = [SystemMessage(content=sys_prompt)] + list(state["messages"])
 
-    llm = get_llm()
+    llm = _get_node_llm(state)
     response = await llm.ainvoke(messages)
 
     return {

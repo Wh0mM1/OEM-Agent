@@ -1,3 +1,13 @@
+---
+title: Mahindra Automotive OEM AI Concierge
+emoji: 🚙
+colorFrom: red
+colorTo: gray
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Mahindra Automotive OEM — Multistage Conversational AI Concierge
 
 > **Production-grade, multistage conversational AI concierge built for enterprise automotive OEMs (like Mahindra & Mahindra). Features dynamic every-turn intent triage across the 4 key stages of the customer lifecycle, an authoritative catalog for zero price/specification hallucination, and real-time bidirectional synchronization with Zoho CRM REST API v8.**
@@ -10,6 +20,7 @@ The repository is cleanly architected with strict separation between the backend
 
 ```text
 OEM Agent/
+├── Dockerfile                  # Multi-stage production container for Hugging Face Spaces (Port 7860)
 ├── docker-compose.yml          # One-command orchestration for prebuilt Docker Hub images
 ├── push_to_dockerhub.sh        # Automated image build & push script for Docker Hub (wh0mm1)
 ├── .env.example                # Unified environment configuration template
@@ -204,7 +215,58 @@ To build and push fresh image releases to Docker Hub under `wh0mm1`:
 
 ---
 
-## 5. Local Development Setup (Without Docker)
+## 5. Free Cloud Deployment: Hugging Face Spaces (Always-On, 16 GB RAM)
+
+Hugging Face Spaces provides a **100% free, always-on (no sleep)** Docker runtime with **2 vCPUs and 16 GB RAM**. The root `Dockerfile` packages both the compiled React frontend and FastAPI backend into a single unified container listening on port `7860`.
+
+### Step-by-Step Deployment Guide:
+
+1. **Create a Space on Hugging Face:**
+   * Navigate to [huggingface.co/new-space](https://huggingface.co/new-space).
+   * **Space Name:** `mahindra-oem-concierge` (or your choice).
+   * **License:** `apache-2.0` or `mit`.
+   * **Select Space SDK:** Choose **Docker** $\rightarrow$ **Blank**.
+   * **Space Hardware:** Select **Free (2 vCPU · 16 GB RAM)**.
+   * **Visibility:** Public.
+
+2. **Configure Space Secrets (Environment Variables):**
+   * In your Space, navigate to **Settings** $\rightarrow$ **Variables and secrets** $\rightarrow$ **New secret**.
+   * Add your secrets (all CRM authentication happens securely inside the backend, keeping your credentials hidden from visitors):
+     * `OPENROUTER_API_KEY`: Your OpenRouter API key.
+     * `OPENROUTER_MODEL`: `nvidia/nemotron-3-ultra-550b-a55b:free`
+     * `USE_MOCK_ZOHO`: `false` (or `true` to use simulated mock CRM)
+     * `ZOHO_CLIENT_ID`: Your Zoho Client ID
+     * `ZOHO_CLIENT_SECRET`: Your Zoho Client Secret
+     * `ZOHO_REFRESH_TOKEN`: Your Zoho Refresh Token
+     * `ZOHO_DC`: `in` (or your regional DC: `com`, `eu`, etc.)
+
+3. **Deploy via Git:**
+   Run the following commands from your local repository:
+   ```bash
+   # Add Hugging Face Space as a git remote
+   git remote add space https://huggingface.co/spaces/<your-hf-username>/mahindra-oem-concierge
+
+   # Push code to trigger automatic build and deployment
+   git push --force space main
+   ```
+
+Hugging Face Spaces will automatically build the multi-stage `Dockerfile`, start the service on port `7860`, and provide a public URL (e.g., `https://<your-hf-username>-mahindra-oem-concierge.hf.space`).
+
+---
+
+## 6. Usage Quota & Bring-Your-Own-Key (BYOK) Architecture
+
+To safeguard API limits during public demos without requiring registration, the concierge incorporates an automated **Sliding-Window Hourly Rate Limiter** and **BYOK (Bring Your Own Key)** interface:
+
+* **Hourly Shared Quota:** Automatically caps unauthenticated requests to **30 requests per hour** against the default server OpenRouter key.
+* **Real-time Quota Monitoring:** The `/api/rate-limit/status` endpoint and header badge monitor active usage (e.g., `5 / 30 requests this hour`).
+* **Automated BYOK Dialog:** If the 30 requests/hour limit is reached, the backend flags `requires_custom_key: true`, and the React UI automatically presents the **OpenRouter Settings Dialog**.
+* **Zero Storage Leakage:** User-provided keys are stored exclusively in their own browser (`localStorage`) and sent securely per request, bypassing the server rate limit entirely.
+* **Header Trigger:** Users can click the **API Key / Quota** button in the top navigation bar at any point to view remaining requests or input their custom key.
+
+---
+
+## 7. Local Development Setup (Without Docker)
 
 ### Prerequisites
 - Python 3.11+ with [`uv`](https://docs.astral.sh/uv/) installed.

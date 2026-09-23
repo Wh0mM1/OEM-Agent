@@ -6,6 +6,8 @@ class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
     thread_id: Optional[str] = None
+    openrouter_key: Optional[str] = None
+    openrouter_model: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
@@ -16,6 +18,8 @@ class ChatResponse(BaseModel):
     tool_chips: List[Dict[str, Any]] = Field(default_factory=list)
     collected_slots: Dict[str, Any] = Field(default_factory=dict)
     crm_ids: Dict[str, str] = Field(default_factory=dict)
+    requires_custom_key: bool = False
+    rate_limit_info: Optional[Dict[str, Any]] = None
 
 
 class VehicleVariant(BaseModel):

@@ -2,8 +2,21 @@ import os
 from core.config import settings
 
 
-def get_llm():
-    """Returns the configured Chat model with tool-calling capabilities."""
+def get_llm(custom_key: str = None, custom_model: str = None):
+    """Returns the configured Chat model with tool-calling capabilities.
+    If custom_key is provided (BYOK), instantiates ChatOpenAI with user's key and model.
+    """
+    if custom_key and custom_key.strip():
+        from langchain_openai import ChatOpenAI
+        model_name = custom_model.strip() if custom_model and custom_model.strip() else settings.OPENROUTER_MODEL
+        return ChatOpenAI(
+            model=model_name,
+            temperature=0.1,
+            api_key=custom_key.strip(),
+            base_url="https://openrouter.ai/api/v1",
+            max_retries=2,
+        )
+
     provider = settings.LLM_PROVIDER.lower()
 
     if provider == "gemini" and settings.GEMINI_API_KEY:

@@ -49,3 +49,5 @@ class AgentState(TypedDict):
     tool_chips: Annotated[List[ToolExecutionChip], operator.add]
     clarification_prompt: Optional[str]
     error_message: Optional[str]
+    custom_llm_key: Optional[str]
+    custom_llm_model: Optional[str]

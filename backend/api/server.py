@@ -1,6 +1,8 @@
 import uuid
 import json
+import time
 import asyncio
+from collections import deque
 from pathlib import Path
 from typing import AsyncGenerator
 from fastapi import FastAPI, HTTPException
@@ -43,6 +45,46 @@ FALLBACK_ERROR_MESSAGE = (
 )
 
 
+class RateLimiter:
+    """Sliding-window hourly rate limiter for shared OpenRouter key."""
+    def __init__(self, max_requests: int = 30, window_seconds: int = 3600):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self.timestamps: deque = deque()
+
+    def _clean_old(self, now: float):
+        cutoff = now - self.window_seconds
+        while self.timestamps and self.timestamps[0] < cutoff:
+            self.timestamps.popleft()
+
+    def check_and_record(self, has_custom_key: bool) -> tuple[bool, int, int]:
+        """Returns (is_allowed, current_used_count, remaining_quota)."""
+        if has_custom_key:
+            return True, len(self.timestamps), 999999
+
+        now = time.time()
+        self._clean_old(now)
+
+        if len(self.timestamps) >= self.max_requests:
+            return False, len(self.timestamps), 0
+
+        self.timestamps.append(now)
+        return True, len(self.timestamps), self.max_requests - len(self.timestamps)
+
+    def get_status(self) -> dict:
+        now = time.time()
+        self._clean_old(now)
+        used = len(self.timestamps)
+        return {
+            "used_last_hour": used,
+            "max_per_hour": self.max_requests,
+            "remaining": max(0, self.max_requests - used),
+        }
+
+
+rate_limiter = RateLimiter(max_requests=30, window_seconds=3600)
+
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
     for dist_dir in [STATIC_DIST_DIR, FRONTEND_DIST_DIR]:
@@ -55,17 +97,49 @@ async def serve_index():
     return HTMLResponse(index_file.read_text(encoding="utf-8"))
 
 
+@app.get("/api/rate-limit/status")
+async def get_rate_limit_status():
+    """Inspect current shared hourly quota usage."""
+    return rate_limiter.get_status()
+
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
-    """Standard REST endpoint with graceful fallback."""
+    """Standard REST endpoint with rate limiting & BYOK support."""
     session_id = request.session_id or f"sess_{uuid.uuid4().hex[:8]}"
     thread_id = request.thread_id or session_id
+
+    has_custom_key = bool(request.openrouter_key and request.openrouter_key.strip())
+    allowed, used_count, remaining = rate_limiter.check_and_record(has_custom_key)
+
+    if not allowed:
+        return ChatResponse(
+            session_id=session_id,
+            thread_id=thread_id,
+            active_stage="quota_exceeded",
+            response=(
+                "The shared community quota (30 requests/hour) has been reached. "
+                "Please provide your own OpenRouter API key and preferred model to continue."
+            ),
+            tool_chips=[{
+                "tool_name": "rate_limiter",
+                "status": "error",
+                "label": "Hourly Quota Reached (30/30 req)",
+                "data": {"used": used_count, "limit": 30},
+            }],
+            collected_slots={},
+            crm_ids={},
+            requires_custom_key=True,
+            rate_limit_info=rate_limiter.get_status(),
+        )
 
     config = {"configurable": {"thread_id": thread_id}}
     inputs = {
         "messages": [HumanMessage(content=request.message)],
         "session_id": session_id,
         "thread_id": thread_id,
+        "custom_llm_key": request.openrouter_key.strip() if request.openrouter_key else None,
+        "custom_llm_model": request.openrouter_model.strip() if request.openrouter_model else None,
     }
 
     try:
@@ -81,6 +155,8 @@ async def chat_endpoint(request: ChatRequest):
             tool_chips=final_state.get("tool_chips", []),
             collected_slots=final_state.get("collected_slots", {}),
             crm_ids=final_state.get("crm_ids", {}),
+            requires_custom_key=False,
+            rate_limit_info=rate_limiter.get_status(),
         )
     except Exception as e:
         # Graceful fallback: Never crash or dump raw stack traces
@@ -97,14 +173,40 @@ async def chat_endpoint(request: ChatRequest):
             }],
             collected_slots={},
             crm_ids={},
+            requires_custom_key=False,
+            rate_limit_info=rate_limiter.get_status(),
         )
 
 
 @app.post("/api/chat/stream")
 async def chat_stream_endpoint(request: ChatRequest):
-    """Server-Sent Events (SSE) streaming endpoint for low perceived latency."""
+    """Server-Sent Events (SSE) streaming endpoint with rate limiting & BYOK support."""
     session_id = request.session_id or f"sess_{uuid.uuid4().hex[:8]}"
     thread_id = request.thread_id or session_id
+
+    has_custom_key = bool(request.openrouter_key and request.openrouter_key.strip())
+    allowed, used_count, remaining = rate_limiter.check_and_record(has_custom_key)
+
+    if not allowed:
+        async def quota_event_generator() -> AsyncGenerator[str, None]:
+            msg = (
+                "The shared community quota (30 requests/hour) has been reached. "
+                "Please provide your own OpenRouter API key and preferred model to continue."
+            )
+            yield f"data: {json.dumps({'type': 'init', 'session_id': session_id, 'thread_id': thread_id})}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'stage': 'quota_exceeded', 'tool_chips': [{'tool_name': 'rate_limiter', 'status': 'error', 'label': 'Hourly Quota Reached (30/30 req)'}], 'requires_custom_key': True, 'rate_limit_info': rate_limiter.get_status()})}\n\n"
+            yield f"data: {json.dumps({'type': 'chunk', 'text': msg})}\n\n"
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+        return StreamingResponse(
+            quota_event_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
     async def event_generator() -> AsyncGenerator[str, None]:
         config = {"configurable": {"thread_id": thread_id}}
@@ -112,6 +214,8 @@ async def chat_stream_endpoint(request: ChatRequest):
             "messages": [HumanMessage(content=request.message)],
             "session_id": session_id,
             "thread_id": thread_id,
+            "custom_llm_key": request.openrouter_key.strip() if request.openrouter_key else None,
+            "custom_llm_model": request.openrouter_model.strip() if request.openrouter_model else None,
         }
 
         try:
@@ -124,7 +228,7 @@ async def chat_stream_endpoint(request: ChatRequest):
             full_text = str(messages[-1].content) if messages else FALLBACK_ERROR_MESSAGE
 
             # Stream metadata and tool chips first
-            yield f"data: {json.dumps({'type': 'meta', 'stage': final_state.get('active_stage', 'new_lead'), 'tool_chips': final_state.get('tool_chips', [])})}\n\n"
+            yield f"data: {json.dumps({'type': 'meta', 'stage': final_state.get('active_stage', 'new_lead'), 'tool_chips': final_state.get('tool_chips', []), 'requires_custom_key': False, 'rate_limit_info': rate_limiter.get_status()})}\n\n"
 
             # Stream text chunks progressively to simulate smooth token streaming
             words = full_text.split(" ")
