@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#0b1120] text-slate-100;
+  }
+}
+
+/* Custom smooth scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Markdown tables and lists in assistant messages */
+.prose-table table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+}
+.prose-table th {
+  background-color: rgba(30, 41, 59, 0.7);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border: 1px solid rgba(51, 65, 85, 0.5);
+  font-weight: 600;
+  color: #e2e8f0;
+}
+.prose-table td {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid rgba(51, 65, 85, 0.4);
+  color: #cbd5e1;
+}
+.prose-table tr:nth-child(even) {
+  background-color: rgba(15, 23, 42, 0.4);
+}

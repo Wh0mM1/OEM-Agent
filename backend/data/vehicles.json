@@ -1,0 +1,126 @@
+{
+  "XUV700": {
+    "model_name": "Mahindra XUV700",
+    "tagline": "Rush of adrenaline with Level-2 ADAS",
+    "segment": "Premium 5/7-Seater Monocoque SUV",
+    "price_range": "₹13.99 Lakh - ₹26.99 Lakh (Ex-Showroom, Delhi)",
+    "overview": "Flagship SUV powered by 2.0L mStallion Turbo Petrol (200 PS) or 2.2L mHawk Diesel (185 PS) with Level-2 ADAS, panoramic skyroof, and twin 10.25-inch dual screens.",
+    "variants": [
+      {
+        "name": "MX",
+        "ex_showroom_price": "₹13.99 Lakh",
+        "transmission": "6-Speed Manual",
+        "seating": 5,
+        "fuel_type": "Petrol / Diesel",
+        "key_features": ["8-inch Infotainment", "7-inch Digital Cluster", "Smart Door Handles", "ESC"]
+      },
+      {
+        "name": "AX5",
+        "ex_showroom_price": "₹17.49 Lakh",
+        "transmission": "6-Speed Manual / 6-Speed Automatic",
+        "seating": 5,
+        "fuel_type": "Petrol / Diesel",
+        "key_features": ["Panoramic Skyroof", "Curtain Airbags", "LED DRLs & Headlamps", "17-inch Diamond Cut Alloys"]
+      },
+      {
+        "name": "AX7 Luxury (AX7L)",
+        "ex_showroom_price": "₹23.99 Lakh",
+        "transmission": "6-Speed Automatic (Optional AWD)",
+        "seating": 7,
+        "fuel_type": "Diesel",
+        "key_features": ["Level-2 ADAS", "Sony 12-Speaker 3D Audio", "Blind View Monitor", "Wireless Charging", "Ventilated Front Seats"]
+      }
+    ]
+  },
+  "THAR": {
+    "model_name": "Mahindra Thar & Thar Roxx",
+    "tagline": "Explore the impossible — Off-road icon",
+    "segment": "Lifestyle 4x4 / 5-Door Off-Roader",
+    "price_range": "₹11.35 Lakh - ₹22.49 Lakh (Ex-Showroom, Delhi)",
+    "overview": "Built on a rugged ladder-frame chassis with mechanical locking differential, shift-on-the-fly 4x4 low range, 650mm water-wading capability, and modern infotainment.",
+    "variants": [
+      {
+        "name": "AX Opt (3-Door)",
+        "ex_showroom_price": "₹11.35 Lakh",
+        "transmission": "6-Speed Manual",
+        "seating": 4,
+        "fuel_type": "Diesel / Petrol (RWD)",
+        "key_features": ["Roll Cage", "Manual 4WD / RWD", "Removable Hard Top", "Monotube Shock Absorbers"]
+      },
+      {
+        "name": "LX Hard Top 4x4 (3-Door)",
+        "ex_showroom_price": "₹17.15 Lakh",
+        "transmission": "6-Speed Automatic",
+        "seating": 4,
+        "fuel_type": "mHawk 130 Diesel",
+        "key_features": ["Mechanical Locking Rear Diff", "18-inch Deep Silver Alloys", "7-inch Touchscreen with Adventure Stats", "Cruise Control"]
+      },
+      {
+        "name": "Thar Roxx AX7L 4x4 (5-Door)",
+        "ex_showroom_price": "₹22.49 Lakh",
+        "transmission": "6-Speed Automatic",
+        "seating": 5,
+        "fuel_type": "mHawk 175 Diesel",
+        "key_features": ["Panoramic Skyroof", "Level-2 ADAS", "Ventilated Leather Seats", "Harman Kardon 9-Speaker Audio", "Terrain Modes"]
+      }
+    ]
+  },
+  "SCORPIO-N": {
+    "model_name": "Mahindra Scorpio-N",
+    "tagline": "The Big Daddy of SUVs",
+    "segment": "Authentic D-Segment Ladder-Frame SUV",
+    "price_range": "₹13.85 Lakh - ₹24.54 Lakh (Ex-Showroom, Delhi)",
+    "overview": "Commanding high seating posture, 4XPLOR terrain management system with intelligent modes (Snow, Mud, Sand), mHawk 175 PS diesel, and penta-link rear suspension with Watt's linkage.",
+    "variants": [
+      {
+        "name": "Z4",
+        "ex_showroom_price": "₹15.45 Lakh",
+        "transmission": "6-Speed Manual / Automatic",
+        "seating": 7,
+        "fuel_type": "Petrol / Diesel",
+        "key_features": ["8-inch Touchscreen", "ESP", "Hill Hold & Descent Control", "Rear AC Vents"]
+      },
+      {
+        "name": "Z8",
+        "ex_showroom_price": "₹19.29 Lakh",
+        "transmission": "6-Speed Manual / Automatic (Optional 4XPLOR)",
+        "seating": 7,
+        "fuel_type": "Diesel / Petrol",
+        "key_features": ["AdrenoX Connected Car Tech", "Dual-Zone Climate Control", "Leatherette Interiors", "LED Projector Fog Lamps"]
+      },
+      {
+        "name": "Z8L (Luxury Edition)",
+        "ex_showroom_price": "₹24.54 Lakh",
+        "transmission": "6-Speed Automatic with 4XPLOR 4WD",
+        "seating": 6,
+        "fuel_type": "mHawk 175 Diesel",
+        "key_features": ["Sony 12-Speaker 3D Audio", "Front Parking Camera", "Driver Power Seat", "Wireless Charging", "Captain Seats"]
+      }
+    ]
+  },
+  "BOLERO_NEO": {
+    "model_name": "Mahindra Bolero Neo",
+    "tagline": "Tough as nails, built for real India",
+    "segment": "Compact Rugged Body-on-Frame SUV",
+    "price_range": "₹9.90 Lakh - ₹12.15 Lakh (Ex-Showroom, Delhi)",
+    "overview": "Rear-wheel drive with Multi-Terrain Technology (MTT mechanical differential lock), micro-hybrid tech, and proven mHawk75 engine for extreme durability.",
+    "variants": [
+      {
+        "name": "N4",
+        "ex_showroom_price": "₹9.90 Lakh",
+        "transmission": "5-Speed Manual",
+        "seating": 7,
+        "fuel_type": "1.5L mHawk Diesel",
+        "key_features": ["RWD Platform", "Twin Airbags", "ABS with EBD", "Power Steering"]
+      },
+      {
+        "name": "N10 (Opt)",
+        "ex_showroom_price": "₹12.15 Lakh",
+        "transmission": "5-Speed Manual",
+        "seating": 7,
+        "fuel_type": "1.5L mHawk Diesel",
+        "key_features": ["Multi-Terrain Tech (Differential Lock)", "7-inch Touchscreen", "Alloy Wheels", "Armrests", "Static Bending Headlamps"]
+      }
+    ]
+  }
+}

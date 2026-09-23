@@ -1,0 +1,9 @@
+{
+  "dependencies": [
+    "."
+  ],
+  "graphs": {
+    "automotive_agent": "./agent/graph.py:automotive_graph"
+  },
+  "env": ".env"
+}

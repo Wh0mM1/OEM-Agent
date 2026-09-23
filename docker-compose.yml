@@ -1,0 +1,66 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mahindra-oem-backend
+    ports:
+      - "${PORT:-8000}:8000"
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      # Application Configuration
+      - APP_NAME=${APP_NAME:-Mahindra Automotive OEM Conversational Agent}
+      - APP_ENV=${APP_ENV:-development}
+      - HOST=0.0.0.0
+      - PORT=8000
+
+      # LLM Provider Configuration ('openrouter', 'groq', 'gemini', 'ollama')
+      - LLM_PROVIDER=${LLM_PROVIDER:-openrouter}
+
+      # OpenRouter Free/Paid Model Configuration
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-nvidia/nemotron-3-ultra-550b-a55b:free}
+      - OPENROUTER_BASE_URL=${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+
+      # Groq Free Tier Configuration (Llama 3.3 / Llama 3.1)
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
+
+      # Google Gemini Free Tier Configuration
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash-lite}
+
+      # Ollama Local Host Configuration
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
+
+      # Zoho CRM OAuth 2.0 Credentials (Set USE_MOCK_ZOHO=false for live sync)
+      - USE_MOCK_ZOHO=${USE_MOCK_ZOHO:-true}
+      - ZOHO_CLIENT_ID=${ZOHO_CLIENT_ID:-}
+      - ZOHO_CLIENT_SECRET=${ZOHO_CLIENT_SECRET:-}
+      - ZOHO_REFRESH_TOKEN=${ZOHO_REFRESH_TOKEN:-}
+
+      # Zoho Data Center Specific Domains (Options: in, com, eu, com.au)
+      - ZOHO_DC=${ZOHO_DC:-in}
+      - ZOHO_ACCOUNTS_URL=${ZOHO_ACCOUNTS_URL:-https://accounts.zoho.in}
+      - ZOHO_API_BASE_URL=${ZOHO_API_BASE_URL:-https://www.zohoapis.in/crm/v8}
+    volumes:
+      - ./backend/data:/app/data
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mahindra-oem-frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://backend:8000}
+    depends_on:
+      - backend
+    restart: unless-stopped

@@ -1,0 +1,123 @@
+# ==============================================================================
+# 1. Credentials, API Keys, Tokens & Secrets (STRICT ZERO-DISCLOSURE)
+# ==============================================================================
+.env
+.env.*
+*.env
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Private Keys, Certificates, Tokens & Secrets
+*.pem
+*.key
+*.pkcs12
+*.p12
+*.token
+*.cert
+*.crt
+credentials.json
+client_secrets*.json
+service_account*.json
+zoho_token*.json
+token.json
+tokens.json
+
+# ==============================================================================
+# 2. Python Virtual Environments & Bytecode
+# ==============================================================================
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ==============================================================================
+# 3. Testing, Coverage & Linters
+# ==============================================================================
+.pytest_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+htmlcov/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# ==============================================================================
+# 4. Node.js & Frontend Build Artifacts
+# ==============================================================================
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+static_dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==============================================================================
+# 5. LangGraph & Runtime Cache
+# ==============================================================================
+.langgraph/
+
+# ==============================================================================
+# 6. Operating System Artifacts
+# ==============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ==============================================================================
+# 7. IDE & Editor Artifacts
+# ==============================================================================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# ==============================================================================
+# 8. Docker Overrides & Runtime Logs
+# ==============================================================================
+docker-compose.override.yml
+*.log

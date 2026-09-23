@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mahindra Automotive | Executive Client Concierge</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .message-stream { animation: fadeIn 0.25s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    
+    /* Executive Markdown & Table Rendering */
+    .prose-custom table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0.85rem 0; border: 1px solid #334155; border-radius: 8px; overflow: hidden; background-color: #0f172a; }
+    .prose-custom th { background-color: #1e293b; color: #f8fafc; font-weight: 600; text-align: left; padding: 9px 13px; font-size: 0.8rem; border-bottom: 1px solid #334155; letter-spacing: 0.02em; }
+    .prose-custom td { padding: 9px 13px; font-size: 0.8rem; color: #cbd5e1; border-bottom: 1px solid #1e293b; line-height: 1.45; }
+    .prose-custom tr:last-child td { border-bottom: none; }
+    .prose-custom tr:nth-child(even) td { background-color: rgba(30, 41, 59, 0.35); }
+    .prose-custom strong { color: #f8fafc; font-weight: 600; }
+    .prose-custom ul { list-style-type: disc; margin-left: 1.25rem; margin-top: 0.4rem; margin-bottom: 0.4rem; }
+    .prose-custom ol { list-style-type: decimal; margin-left: 1.25rem; margin-top: 0.4rem; margin-bottom: 0.4rem; }
+    .prose-custom li { margin-bottom: 0.25rem; color: #cbd5e1; }
+    .prose-custom h1, .prose-custom h2, .prose-custom h3 { color: #f8fafc; font-weight: 700; margin-top: 0.85rem; margin-bottom: 0.35rem; }
+    .prose-custom hr { border-color: #334155; margin: 0.85rem 0; }
+    .prose-custom p { margin-bottom: 0.6rem; }
+    .prose-custom p:last-child { margin-bottom: 0; }
+    .typing-cursor::after { content: '▋'; animation: blink 1s infinite; color: #e11d48; margin-left: 2px; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden antialiased">
+  
+  <!-- Executive Top Bar -->
+  <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 px-6 py-3.5 flex items-center justify-between z-10">
+    <div class="flex items-center space-x-3.5">
+      <div class="relative">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center font-extrabold text-white text-lg tracking-wider shadow-lg shadow-red-700/25 border border-red-500/30">
+          M
+        </div>
+        <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full"></span>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-semibold text-sm text-slate-100 tracking-tight">Mahindra Automotive Concierge</h1>
+          <span class="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full font-medium tracking-wide">OFFICIAL OEM</span>
+        </div>
+        <p class="text-xs text-slate-400">Karan • Senior Client Advisor • Connected to Zoho CRM</p>
+      </div>
+    </div>
+
+    <!-- Active Lifecycle Stage Indicator & Mirror Button -->
+    <div class="flex items-center space-x-3">
+      <div id="stage-badge" class="px-3 py-1 rounded-lg bg-slate-800/80 border border-slate-700/80 text-xs font-medium flex items-center gap-2 text-slate-300">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="stage-text">Active Stage: New Lead (Discovery)</span>
+      </div>
+      <button onclick="toggleCrmDrawer()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium border border-slate-700 text-slate-200 flex items-center gap-1.5 transition shadow-sm">
+        <i class="fa-solid fa-database text-red-400"></i>
+        <span>Live CRM Mirror</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <div class="flex flex-1 overflow-hidden relative">
+    
+    <!-- Central Chat Interface -->
+    <main class="flex-1 flex flex-col h-full bg-gradient-to-b from-slate-950 to-slate-900/60">
+      
+      <!-- Conversation Stream -->
+      <div id="chat-box" class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        
+        <!-- Welcome Message from Human Advisor -->
+        <div class="flex items-start gap-3.5 max-w-2xl message-stream">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center text-white text-xs font-semibold shadow-md shrink-0">
+            K
+          </div>
+          <div class="bg-slate-900/90 border border-slate-800/90 rounded-2xl rounded-tl-sm p-4 text-sm text-slate-200 shadow-sm leading-relaxed">
+            <p class="font-medium text-slate-100 mb-1">Namaste! I'm Karan from Mahindra Client Services.</p>
+            <p class="text-slate-300 text-xs leading-relaxed">
+              Whether you are discovering a new SUV, confirming your test drive appointment, tracking an allocated vehicle, or scheduling scheduled maintenance — I have direct access to our vehicle database and dealership network to assist you immediately.
+            </p>
+            
+            <div class="grid grid-cols-2 gap-2 mt-3.5 text-xs">
+              <div class="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 hover:border-slate-700 transition">
+                <div class="font-semibold text-red-400 mb-0.5">Explore SUVs</div>
+                <div class="text-slate-400 text-[11px]">XUV700, Thar, Scorpio-N pricing & ADAS</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 hover:border-slate-700 transition">
+                <div class="font-semibold text-amber-400 mb-0.5">Deal Status</div>
+                <div class="text-slate-400 text-[11px]">Quotes, schedules & dealer executives</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 hover:border-slate-700 transition">
+                <div class="font-semibold text-blue-400 mb-0.5">Order Tracking</div>
+                <div class="text-slate-400 text-[11px]">Plant dispatch, VIN allocation & delivery</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 hover:border-slate-700 transition">
+                <div class="font-semibold text-emerald-400 mb-0.5">Periodic Service</div>
+                <div class="text-slate-400 text-[11px]">Direct workshop slot booking</div>
+              </div>
+            </div>
+            
+            <div class="mt-3 text-[11px] text-slate-400 flex items-center justify-between border-t border-slate-800/80 pt-2">
+              <span>Mahindra Automotive Digital Desk</span>
+              <span id="welcome-time"></span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Quick Action Pills -->
+      <div class="px-6 py-2.5 bg-slate-900/60 border-t border-slate-800/70 flex gap-2 overflow-x-auto text-xs scrollbar-none">
+        <span class="text-slate-400 text-xs self-center mr-1 whitespace-nowrap font-medium">Quick Consult:</span>
+        <button onclick="sendQuickPrompt('Tell me about XUV700 AX7L price and ADAS features')" class="px-3.5 py-1.5 bg-slate-800/90 hover:bg-slate-700/90 rounded-full border border-slate-700 text-slate-200 whitespace-nowrap transition flex items-center gap-1.5 text-xs shadow-sm">
+          <span>🚙</span> Explore XUV700
+        </button>
+        <button onclick="sendQuickPrompt('Check my test drive deal for phone 9819988776')" class="px-3.5 py-1.5 bg-slate-800/90 hover:bg-slate-700/90 rounded-full border border-slate-700 text-slate-200 whitespace-nowrap transition flex items-center gap-1.5 text-xs shadow-sm">
+          <span>📅</span> Test Drive Deal (#DEAL-2001)
+        </button>
+        <button onclick="sendQuickPrompt('What is the delivery date for booking MAH-9921?')" class="px-3.5 py-1.5 bg-slate-800/90 hover:bg-slate-700/90 rounded-full border border-slate-700 text-slate-200 whitespace-nowrap transition flex items-center gap-1.5 text-xs shadow-sm">
+          <span>📦</span> Track Booking (#MAH-9921)
+        </button>
+        <button onclick="sendQuickPrompt('Book service for Scorpio-N reg MH02CD1234, 20000 km at Andheri')" class="px-3.5 py-1.5 bg-slate-800/90 hover:bg-slate-700/90 rounded-full border border-slate-700 text-slate-200 whitespace-nowrap transition flex items-center gap-1.5 text-xs shadow-sm">
+          <span>🔧</span> Book Service Appointment
+        </button>
+      </div>
+
+      <!-- Humanized Input Bar -->
+      <div class="p-4 bg-slate-900/90 border-t border-slate-800">
+        <form id="chat-form" onsubmit="handleSendMessage(event)" class="flex gap-2.5 max-w-4xl mx-auto items-center">
+          <div class="relative flex-1">
+            <input
+              id="user-input"
+              type="text"
+              placeholder="Ask about vehicle specs, scheduled appointments, bookings, or service..."
+              class="w-full bg-slate-950 border border-slate-800/90 rounded-xl pl-4 pr-10 py-3 text-sm focus:outline-none focus:border-red-500/80 text-slate-100 placeholder-slate-500 shadow-inner"
+              autocomplete="off"
+            />
+          </div>
+          <button
+            type="submit"
+            id="send-btn"
+            class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white px-5 py-3 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-md shadow-red-700/20 active:scale-95"
+          >
+            <span>Send</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+        </form>
+      </div>
+    </main>
+
+    <!-- Slide-Over Zoho CRM Mirror -->
+    <aside id="crm-drawer" class="hidden w-96 bg-slate-900/95 backdrop-blur-md border-l border-slate-800 flex flex-col h-full shadow-2xl z-20 transition-all">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-2 h-2 rounded-full bg-red-500"></div>
+          <h2 class="font-semibold text-xs tracking-wide text-slate-200">ZOHO CRM LIVE DATABASE</h2>
+        </div>
+        <button onclick="toggleCrmDrawer()" class="text-slate-400 hover:text-slate-200 p-1">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+      <div class="p-4 flex-1 overflow-y-auto space-y-3 font-mono text-[11px]" id="crm-records-content">
+        <div class="text-slate-400">Querying synchronized records...</div>
+      </div>
+    </aside>
+
+  </div>
+
+  <script>
+    document.getElementById('welcome-time').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    let currentSessionId = 'sess_' + Math.random().toString(36).substring(2, 9);
+    const FALLBACK_MSG = "Sorry, I encountered an issue while processing your request. Please try again or rephrase your question.";
+
+    // Configure marked to open links safely and support tables cleanly
+    marked.setOptions({
+      gfm: true,
+      breaks: true
+    });
+
+    function toggleCrmDrawer() {
+      const drawer = document.getElementById('crm-drawer');
+      drawer.classList.toggle('hidden');
+      if (!drawer.classList.contains('hidden')) {
+        fetchCrmRecords();
+      }
+    }
+
+    async function fetchCrmRecords() {
+      const content = document.getElementById('crm-records-content');
+      try {
+        const res = await fetch('/api/crm/status');
+        const data = await res.json();
+        let html = `
+          <div class="mb-3 p-2 rounded bg-slate-950/80 border border-slate-800 flex items-center justify-between font-sans">
+            <span class="text-slate-300">Sync Status:</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-semibold ${data.mode === 'live' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}">
+              ${data.mode.toUpperCase()} CRM (${data.dc.toUpperCase()} DC)
+            </span>
+          </div>
+        `;
+
+        html += `<div class="font-sans font-semibold text-slate-300 text-xs mt-2 mb-1 flex items-center gap-1.5"><i class="fa-solid fa-user-plus text-emerald-400"></i> Leads (${data.records.leads.length})</div>`;
+        data.records.leads.forEach(l => {
+          html += `
+            <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80">
+              <div class="text-emerald-400 font-bold font-sans">${l.id} • ${l.Full_Name || (l.First_Name + ' ' + l.Last_Name)}</div>
+              <div class="text-slate-400 text-[10px] mt-0.5">Model: <span class="text-slate-200">${l.Vehicle_Model_of_Interest || 'General'}</span> | Phone: ${l.Phone || 'N/A'}</div>
+              <div class="text-slate-500 text-[10px]">City: ${l.City || 'N/A'} | Source: ${l.Lead_Source || 'AI Desk'}</div>
+            </div>
+          `;
+        });
+
+        html += `<div class="font-sans font-semibold text-slate-300 text-xs mt-4 mb-1 flex items-center gap-1.5"><i class="fa-solid fa-handshake text-amber-400"></i> Deals (${data.records.deals.length})</div>`;
+        data.records.deals.forEach(d => {
+          html += `
+            <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80">
+              <div class="text-amber-400 font-bold font-sans">${d.id} • ${d.Deal_Name}</div>
+              <div class="text-slate-400 text-[10px] mt-0.5">Stage: <span class="text-slate-200">${d.Stage}</span></div>
+              <div class="text-slate-500 text-[10px]">VIN: ${d.VIN || 'Pending'} | Contact: ${d.Phone || 'N/A'}</div>
+            </div>
+          `;
+        });
+
+        html += `<div class="font-sans font-semibold text-slate-300 text-xs mt-4 mb-1 flex items-center gap-1.5"><i class="fa-solid fa-wrench text-blue-400"></i> Cases (${data.records.cases.length})</div>`;
+        data.records.cases.forEach(c => {
+          html += `
+            <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80">
+              <div class="text-blue-400 font-bold font-sans">${c.id} • ${c.Subject}</div>
+              <div class="text-slate-400 text-[10px] mt-0.5">Workshop: <span class="text-slate-200">${c.Preferred_Center || 'Worli'}</span></div>
+              <div class="text-slate-500 text-[10px]">Status: ${c.Status} | Priority: ${c.Priority || 'Normal'}</div>
+            </div>
+          `;
+        });
+
+        content.innerHTML = html;
+      } catch (e) {
+        content.innerHTML = `<div class="text-red-400">Failed to query CRM records.</div>`;
+      }
+    }
+
+    function appendUserBubble(text) {
+      const box = document.getElementById('chat-box');
+      const div = document.createElement('div');
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      div.className = 'flex items-start gap-3 max-w-2xl ml-auto flex-row-reverse message-stream';
+      div.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs text-slate-200 font-semibold shadow-sm shrink-0">
+          You
+        </div>
+        <div class="bg-gradient-to-r from-red-600 to-rose-700 text-white rounded-2xl rounded-tr-sm p-4 text-sm leading-relaxed shadow-sm">
+          <p class="whitespace-pre-wrap">${text}</p>
+          <div class="text-[10px] text-red-200/80 mt-1.5 text-right font-light">${time}</div>
+        </div>
+      `;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function createBotBubble() {
+      const box = document.getElementById('chat-box');
+      const div = document.createElement('div');
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      div.className = 'flex items-start gap-3.5 max-w-2xl message-stream';
+      div.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center text-white text-xs font-semibold shadow-md shrink-0">
+          K
+        </div>
+        <div class="bg-slate-900/95 border border-slate-800 text-slate-200 rounded-2xl rounded-tl-sm p-4 text-sm leading-relaxed shadow-sm w-full">
+          <div class="flex items-center justify-between text-[11px] text-slate-400 mb-2 border-b border-slate-800/60 pb-1.5">
+            <span class="font-medium text-slate-300">Karan • Mahindra Client Advisor</span>
+            <span>${time}</span>
+          </div>
+          <div class="bot-rendered prose-custom text-slate-200 text-sm typing-cursor"></div>
+          <div class="bot-chips flex flex-wrap gap-1.5 mt-3"></div>
+        </div>
+      `;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+      return {
+        contentEl: div.querySelector('.bot-rendered'),
+        chipsEl: div.querySelector('.bot-chips')
+      };
+    }
+
+    function updateStageBadge(stage) {
+      const text = document.getElementById('stage-text');
+      const labels = {
+        'new_lead': 'Active Stage: New Lead (Discovery)',
+        'ongoing_pipeline': 'Active Stage: Ongoing Pipeline (Test Drive / Quote)',
+        'booked_vehicle': 'Active Stage: Booked Vehicle (Allocation & VIN)',
+        'post_purchase_service': 'Active Stage: Post-Purchase (Service & Support)',
+        'ambiguous': 'Active Stage: Triage / Clarification'
+      };
+      text.innerText = labels[stage] || stage;
+    }
+
+    async function handleSendMessage(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('user-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      appendUserBubble(text);
+      input.value = '';
+
+      const { contentEl, chipsEl } = createBotBubble();
+      let rawMarkdownBuffer = '';
+
+      try {
+        const response = await fetch('/api/chat/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, session_id: currentSessionId })
+        });
+
+        if (!response.ok) {
+          throw new Error('Server returned ' + response.status);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const payload = JSON.parse(line.substring(6));
+
+              if (payload.type === 'meta') {
+                if (payload.stage) updateStageBadge(payload.stage);
+                if (payload.tool_chips && payload.tool_chips.length > 0) {
+                  chipsEl.innerHTML = payload.tool_chips.map(c => `
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-red-950/40 text-red-300 border border-red-800/40">
+                      <i class="fa-solid fa-circle-check text-emerald-400"></i> ${c.label}
+                    </span>
+                  `).join('');
+                }
+              } else if (payload.type === 'chunk') {
+                rawMarkdownBuffer += payload.text;
+                contentEl.innerHTML = DOMPurify.sanitize(marked.parse(rawMarkdownBuffer));
+                document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+              } else if (payload.type === 'error') {
+                contentEl.innerHTML = DOMPurify.sanitize(marked.parse(payload.text || FALLBACK_MSG));
+              } else if (payload.type === 'done') {
+                contentEl.classList.remove('typing-cursor');
+              }
+            }
+          }
+        }
+
+        contentEl.classList.remove('typing-cursor');
+        if (!document.getElementById('crm-drawer').classList.contains('hidden')) {
+          fetchCrmRecords();
+        }
+      } catch (err) {
+        contentEl.classList.remove('typing-cursor');
+        contentEl.innerHTML = DOMPurify.sanitize(marked.parse(FALLBACK_MSG));
+      }
+    }
+
+    function sendQuickPrompt(promptText) {
+      document.getElementById('user-input').value = promptText;
+      handleSendMessage();
+    }
+  </script>
+</body>
+</html>
