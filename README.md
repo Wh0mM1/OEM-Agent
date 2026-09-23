@@ -10,7 +10,9 @@ The repository is cleanly architected with strict separation between the backend
 
 ```text
 OEM Agent/
-├── docker-compose.yml          # One-command orchestration for both Frontend & Backend
+├── docker-compose.yml          # One-command orchestration for prebuilt Docker Hub images
+├── push_to_dockerhub.sh        # Automated image build & push script for Docker Hub (wh0mm1)
+├── .env.example                # Unified environment configuration template
 ├── .gitignore                  # Comprehensive ignore rules for Python, Node, OS & Secrets
 ├── README.md                   # Complete architectural documentation & execution guide
 ├── backend/                    # Core Python / LangGraph / FastAPI Backend Service
@@ -156,14 +158,20 @@ To enable immediate testing and offline demoing without external hurdles, the sy
 
 ## 4. Quick Start: Running with Docker Compose (Recommended)
 
-Run both the **React Frontend** and the **FastAPI Backend** with a single command:
+### Option A: Instant Launch using Pre-Built Docker Hub Images (Zero-Build)
+
+Both the Backend and Frontend images are published to Docker Hub under the **`wh0mm1`** namespace:
+- **Backend Image:** [`wh0mm1/mahindra-oem-backend:latest`](https://hub.docker.com/r/wh0mm1/mahindra-oem-backend)
+- **Frontend Image:** [`wh0mm1/mahindra-oem-frontend:latest`](https://hub.docker.com/r/wh0mm1/mahindra-oem-frontend)
+
+Anyone can immediately spin up the complete concierge stack without compiling source code or installing Python / Node.js locally:
 
 ```bash
-# 1. Configure backend environment file
-cp backend/.env.example backend/.env
+# 1. Clone the repository and configure the unified environment
+cp .env.example .env
 
-# 2. Build and start both containers
-docker compose up --build
+# 2. Launch the pre-built containers (automatically pulls wh0mm1 images from Docker Hub)
+docker compose up
 ```
 
 - **React Frontend (Claude / ChatGPT Style):** Open **`http://localhost:3000`**
@@ -172,6 +180,26 @@ docker compose up --build
 To stop the containers:
 ```bash
 docker compose down
+```
+
+---
+
+### Option B: Local Container Build & Development
+
+If you are modifying the codebase or wish to build the container images locally from source:
+
+```bash
+# 1. Configure the environment
+cp .env.example .env
+
+# 2. Build and start containers locally
+docker compose up --build
+```
+
+To build and push fresh image releases to Docker Hub under `wh0mm1`:
+```bash
+# Ensure you are logged into Docker Hub (docker login -u wh0mm1)
+./push_to_dockerhub.sh
 ```
 
 ---
