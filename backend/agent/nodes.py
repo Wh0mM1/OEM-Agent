@@ -1,5 +1,6 @@
 import json
 import re
+import datetime
 from typing import Dict, Any, List
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from core.state import AgentState, StageType
@@ -21,6 +22,29 @@ def _get_node_llm(state: AgentState):
         custom_key=state.get("custom_llm_key"),
         custom_model=state.get("custom_llm_model"),
     )
+
+
+def _resolve_relative_weekday(text: str, base_date: datetime.date = None) -> str:
+    """Resolves relative weekday mentions (e.g. Saturday) to an upcoming calendar date."""
+    if not base_date:
+        base_date = datetime.date.today()
+    days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    text_lower = text.lower()
+    for d in days:
+        if d in text_lower:
+            target_idx = days.index(d)
+            current_idx = base_date.weekday()
+            days_ahead = (target_idx - current_idx) % 7
+            if days_ahead == 0:
+                days_ahead = 7
+            target_date = base_date + datetime.timedelta(days=days_ahead)
+            day_num = target_date.day
+            if 11 <= day_num <= 13:
+                suffix = "th"
+            else:
+                suffix = {1: "st", 2: "nd", 3: "rd"}.get(day_num % 10, "th")
+            return f"{day_num}{suffix} {target_date.strftime('%B')}"
+    return ""
 
 
 COMMON_CITIES = [
@@ -53,9 +77,11 @@ def extract_slots_from_text(text: str, current_slots: Dict[str, Any]) -> Dict[st
             slots["phone"] = new_phone
 
     # 2. Extract Name
-    name_match = re.search(r"(?:my name is|name is|i am|i'm|owner is|contact is)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)", text, re.I)
+    name_match = re.search(r"(?:my name is|name is|i am|i'm|owner is|contact is|test drive for|booking for|book for|schedule for|for)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)", text, re.I)
     if name_match:
-        slots["name"] = name_match.group(1).strip()
+        cand = name_match.group(1).strip()
+        if cand.lower() not in ["the", "a", "my", "our", "me", "him", "her", "us", "test", "test drive", "xuv", "xuv700", "thar", "scorpio", "bolero", "service"]:
+            slots["name"] = cand.title()
     elif not slots.get("name"):
         parts = [p.strip() for p in text.split(",")]
         if len(parts) > 1 and re.match(r"^[A-Za-z\s]{3,30}$", parts[0]) and not any(k in parts[0].lower() for k in ["hello", "hi", "test drive", "scorpio", "xuv", "thar", "service"]):
@@ -127,25 +153,37 @@ def extract_slots_from_text(text: str, current_slots: Dict[str, Any]) -> Dict[st
     if booking_match and not slots.get("booking_id"):
         slots["booking_id"] = booking_match.group(0).upper().replace(" ", "-")
 
-    # 11. Extract Model of Interest
-    text_upper = text.upper()
-    if "XUV700" in text_upper or "XUV 700" in text_upper:
-        slots["model_interest"] = "XUV700"
-    elif "THAR" in text_upper:
-        slots["model_interest"] = "Thar"
-    elif "SCORPIO" in text_upper:
-        slots["model_interest"] = "Scorpio-N"
-    elif "BOLERO" in text_upper:
-        slots["model_interest"] = "Bolero Neo"
+    # 11. Extract Model of Interest and Variant dynamically from DB
+    det_model, det_variant = vehicle_db.find_model_and_variant(text)
+    if det_model:
+        slots["model_interest"] = det_model
+    if det_variant:
+        slots["variant_interest"] = det_variant if isinstance(det_variant, str) else det_variant.get("name")
 
     # 12. Extract Follow-Up Preference for Pipeline
-    pref_match = re.search(r"(?:update|change|set|prefer|preference)\s+(?:to|is)?\s*([a-zA-Z0-9\s,–-]+(?:whatsapp|call|phone|email|afternoon|morning|weekend|evening)[^,.]*)", text, re.I)
-    if pref_match:
-        slots["follow_up_preference"] = pref_match.group(0).strip()
-    elif "whatsapp" in text.lower():
-        slots["follow_up_preference"] = "WhatsApp confirmation requested"
-    elif "call" in text.lower() and any(k in text.lower() for k in ["weekend", "saturday", "sunday", "afternoon", "evening"]):
-        slots["follow_up_preference"] = "Call on weekend/afternoon preferred"
+    if any(k in text.lower() for k in ["preference", "whatsapp", "call", "update", "change", "reschedule"]):
+        date_ann = _resolve_relative_weekday(text)
+        channel = "WhatsApp" if "whatsapp" in text.lower() else ("Phone call" if "call" in text.lower() else "Direct contact")
+        timing = ""
+        if "saturday" in text.lower():
+            timing = "on Saturday morning" if "morning" in text.lower() else "on Saturday"
+        elif "sunday" in text.lower():
+            timing = "on Sunday morning" if "morning" in text.lower() else "on Sunday"
+        elif "weekend" in text.lower():
+            timing = "on weekends"
+        elif "afternoon" in text.lower():
+            timing = "in the afternoon"
+        elif "morning" in text.lower():
+            timing = "in the morning"
+
+        if timing and date_ann:
+            slots["follow_up_preference"] = f"{channel} {timing} ({date_ann})"
+        elif timing:
+            slots["follow_up_preference"] = f"{channel} {timing}"
+        elif date_ann:
+            slots["follow_up_preference"] = f"{channel} confirmation ({date_ann}) requested"
+        else:
+            slots["follow_up_preference"] = f"{channel} confirmation requested"
 
     return slots
 
@@ -158,27 +196,41 @@ async def classify_intent_node(state: AgentState) -> Dict[str, Any]:
     updated_slots = extract_slots_from_text(last_user_message, state.get("collected_slots", {}))
 
     # Fast deterministic routing (skips LLM triage call to eliminate latency)
-    if any(k in text_lower for k in ["booking", "vin", "allocation", "delivery date", "mah-", "dispatch", "deposit"]):
+    if any(k in text_lower for k in ["vin", "allocation", "delivery date", "mah-", "dispatch", "deposit", "chakan"]) or (
+        "booking" in text_lower and any(k in text_lower for k in ["status", "delivery", "track", "reference", "car", "vehicle"])
+    ):
         return {
             "active_stage": "booked_vehicle",
             "previous_stage": state.get("active_stage"),
             "collected_slots": updated_slots,
         }
-    if any(k in text_lower for k in ["service", "complaint", "repair", "breakdown", "odometer", "maintenance", "workshop", "km", "periodic", "brake", "oil"]):
+
+    if any(k in text_lower for k in ["service", "complaint", "repair", "breakdown", "odometer", "maintenance", "workshop", "km", "periodic", "brake", "oil", "vibration", "shudder", "rattle"]):
         return {
             "active_stage": "post_purchase_service",
             "previous_stage": state.get("active_stage"),
             "collected_slots": updated_slots,
         }
-    if any(k in text_lower for k in ["deal", "test drive schedule", "sales rep", "follow up", "quotation", "priya"]) or (
-        "deal" in text_lower and re.search(r"\b[6-9]\d{9}\b", text_lower)
-    ):
+
+    # Ongoing Pipeline (Stage 2) - Triggers when checking an existing quote, appointment, deal, or preference
+    is_pipeline = (
+        any(k in text_lower for k in [
+            "quote", "quotation", "appointment", "schedule", "scheduled",
+            "sales rep", "sales executive", "follow up", "follow-up",
+            "deal", "priya", "preference", "whatsapp", "reschedule"
+        ])
+        or ("check" in text_lower and any(w in text_lower for w in ["test drive", "drive", "status", "appointment", "quote"]))
+        or ("test drive" in text_lower and any(w in text_lower for w in ["check", "status", "confirm", "booked", "existing"]))
+    )
+    if is_pipeline:
         return {
             "active_stage": "ongoing_pipeline",
             "previous_stage": state.get("active_stage"),
             "collected_slots": updated_slots,
         }
-    if any(k in text_lower for k in ["price", "features", "specs", "xuv700", "thar", "scorpio", "bolero", "test drive", "variant", "explore", "on road", "cost", "suv"]):
+
+    # New Lead (Stage 1) - Inquiring about models, variants, pricing, or booking a new test drive
+    if updated_slots.get("model_interest") or any(k in text_lower for k in ["price", "features", "specs", "test drive", "variant", "explore", "on road", "cost", "suv", "buy", "drive"]):
         return {
             "active_stage": "new_lead",
             "previous_stage": state.get("active_stage"),
@@ -241,9 +293,21 @@ async def classify_intent_node(state: AgentState) -> Dict[str, Any]:
 
 
 async def new_lead_node(state: AgentState) -> Dict[str, Any]:
-    slots = state.get("collected_slots", {})
+    slots = dict(state.get("collected_slots", {}))
     crm_ids = dict(state.get("crm_ids", {}))
     tool_chips = []
+
+    last_user_message = next(
+        (m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)), ""
+    )
+
+    # Check database for model and variant if not already collected
+    if not slots.get("model_interest") or not slots.get("variant_interest"):
+        det_model, det_variant = vehicle_db.find_model_and_variant(last_user_message)
+        if det_model and not slots.get("model_interest"):
+            slots["model_interest"] = det_model
+        if det_variant and not slots.get("variant_interest"):
+            slots["variant_interest"] = det_variant if isinstance(det_variant, str) else det_variant.get("name")
 
     name = slots.get("name")
     phone = slots.get("phone")
@@ -251,6 +315,7 @@ async def new_lead_node(state: AgentState) -> Dict[str, Any]:
     city = slots.get("city")
     company = slots.get("company", "Retail Customer")
     model = slots.get("model_interest", "XUV700")
+    variant_name = slots.get("variant_interest")
 
     # 1. Lead creation rule: Create lead if all 4 slots exist AND this phone number wasn't already created in this session
     if name and phone and email and city:
@@ -261,6 +326,7 @@ async def new_lead_node(state: AgentState) -> Dict[str, Any]:
                 "email": email,
                 "city": city,
                 "model_of_interest": model,
+                "variant": variant_name,
                 "company": company,
                 "lead_source": "Mahindra AI Digital Showroom",
             })
@@ -275,13 +341,37 @@ async def new_lead_node(state: AgentState) -> Dict[str, Any]:
                 "data": lead_data,
             })
 
+            # Attach catalog specs directly from vehicle_db
+            vehicle_info = vehicle_db.get_vehicle_summary(model)
+            specs_section = ""
+            if vehicle_info:
+                specs_section = (
+                    f"### Mahindra {vehicle_info['model_name']} — Verified Specifications\n\n"
+                    f"**Price Range:** {vehicle_info['price_range']}\n\n"
+                    f"{vehicle_info['overview']}\n\n"
+                    f"| Variant | Ex-Showroom Price | Key Highlights |\n"
+                    f"| :--- | :--- | :--- |\n"
+                )
+                for v in vehicle_info["variants"]:
+                    specs_section += f"| **{v['name']}** | {v['ex_showroom_price']} | {', '.join(v['key_features'][:3])} |\n"
+                specs_section += "\n---\n\n"
+                chip_label = f"Verified Specs: {vehicle_info['model_name']} ({variant_name})" if variant_name else f"Verified Specs: {vehicle_info['model_name']}"
+                tool_chips.insert(0, {
+                    "tool_name": "get_vehicle_info",
+                    "status": "success",
+                    "label": chip_label,
+                    "data": {"model": model, "variant": variant_name},
+                })
+
+            model_disp = f"{model} ({variant_name})" if variant_name else model
             confirmation_text = (
+                f"{specs_section}"
                 f"### Test Drive Request Confirmed!\n\n"
                 f"Thank you, **{name}**! I have registered your details and created a fresh lead in our Zoho CRM portal.\n\n"
                 f"| Booking Parameter | Customer Detail |\n"
                 f"| :--- | :--- |\n"
                 f"| **Lead Reference** | `#{lead_id}` |\n"
-                f"| **Model of Interest** | Mahindra {model} |\n"
+                f"| **Model of Interest** | Mahindra {model_disp} |\n"
                 f"| **Contact Phone** | {phone} |\n"
                 f"| **Email Address** | {email} |\n"
                 f"| **Preferred Location** | {city} |\n"
@@ -294,6 +384,7 @@ async def new_lead_node(state: AgentState) -> Dict[str, Any]:
                 "messages": [AIMessage(content=confirmation_text)],
                 "crm_ids": crm_ids,
                 "tool_chips": tool_chips,
+                "collected_slots": slots,
             }
 
     # 2. Incomplete Slots: Dynamically instruct the agent to ask ONLY for what's missing
@@ -361,7 +452,9 @@ async def new_lead_node(state: AgentState) -> Dict[str, Any]:
         "messages": [response],
         "crm_ids": crm_ids,
         "tool_chips": tool_chips,
+        "collected_slots": slots,
     }
+
 
 
 async def pipeline_node(state: AgentState) -> Dict[str, Any]:
@@ -420,24 +513,39 @@ async def pipeline_node(state: AgentState) -> Dict[str, Any]:
     )
     messages = [SystemMessage(content=sys_prompt)] + list(state["messages"])
 
-    llm = _get_node_llm(state)
-    response = await llm.ainvoke(messages)
-    content = str(response.content).strip()
+    raw_amount = deal.get("Amount", 2399000) if deal else 2399000
+    amount_str = f"₹{raw_amount:,}" if isinstance(raw_amount, (int, float)) else str(raw_amount)
+    deal_desc = deal.get("Description", "") if deal else ""
+    deal_id_str = str(deal.get("id", identifier)) if deal else identifier
+    deal_name_str = deal.get("Deal_Name", "") if deal else ""
+    stage_str = deal.get("Stage", "Proposal/Price Quote") if deal else ""
 
-    if content.startswith("{") and content.endswith("}"):
+    verified_deal_text = (
+        f"### Active Deal Details Verified\n\n"
+        f"I have retrieved your scheduled appointment from our CRM:\n\n"
+        f"| Deal Detail | Information |\n"
+        f"| :--- | :--- |\n"
+        f"| **Deal Record** | `{deal_id_str}` • {deal_name_str} |\n"
+        f"| **Current Stage** | **{stage_str}** |\n"
+        f"| **Quotation** | **{amount_str}** |\n\n"
+        f"{deal_desc}\n\n"
+        f"Would you like me to update your follow-up preference (e.g. WhatsApp, phone call) or reschedule your timing?"
+    )
+
+    try:
+        llm = _get_node_llm(state)
+        response = await llm.ainvoke(messages)
+        content = str(response.content).strip()
+        if content.startswith("{") and content.endswith("}"):
+            if deal:
+                response = AIMessage(content=verified_deal_text)
+    except Exception:
         if deal:
-            content = (
-                f"### Active Deal Details Verified\n\n"
-                f"I have retrieved your scheduled appointment from our CRM:\n\n"
-                f"| Deal Detail | Information |\n"
-                f"| :--- | :--- |\n"
-                f"| **Deal Record** | `{deal.get('id')}` • {deal.get('Deal_Name')} |\n"
-                f"| **Current Stage** | **{deal.get('Stage')}** |\n"
-                f"| **Quotation** | ₹{deal.get('Amount', 0):,} |\n\n"
-                f"{deal.get('Description', '')}\n\n"
-                f"Would you like me to update your follow-up preference (e.g. WhatsApp, phone call) or reschedule your timing?"
+            response = AIMessage(content=verified_deal_text)
+        else:
+            response = AIMessage(
+                content=f"No active deal found for identifier '{identifier}'. Please ask customer to verify their registered phone number."
             )
-            response = AIMessage(content=content)
 
     return {"messages": [response], "tool_chips": tool_chips}
 
@@ -468,24 +576,38 @@ async def booked_node(state: AgentState) -> Dict[str, Any]:
     )
     messages = [SystemMessage(content=sys_prompt)] + list(state["messages"])
 
-    llm = _get_node_llm(state)
-    response = await llm.ainvoke(messages)
-    content = str(response.content).strip()
+    b_id = booking_deal.get("Booking_ID", booking_query) if booking_deal else booking_query
+    b_stage = booking_deal.get("Stage", "Closed Won - Booking Done") if booking_deal else "Closed Won"
+    b_amt = booking_deal.get("Amount", 0) if booking_deal else 0
+    b_amt_str = f"₹{b_amt:,}" if isinstance(b_amt, (int, float)) else str(b_amt)
+    b_desc = booking_deal.get("Description", "") if booking_deal else ""
 
-    if content.startswith("{") and content.endswith("}"):
+    verified_booking_text = (
+        f"### Booking Allocation Status Verified\n\n"
+        f"Here is the real-time status of your vehicle booking from our manufacturing plant:\n\n"
+        f"| Parameter | Allocation Detail |\n"
+        f"| :--- | :--- |\n"
+        f"| **Booking Reference** | `{b_id}` |\n"
+        f"| **Deal Stage** | {b_stage} |\n"
+        f"| **Amount** | {b_amt_str} |\n\n"
+        f"{b_desc}\n\n"
+        f"Is there anything else regarding registration paperwork or balance payment you would like assistance with?"
+    )
+
+    try:
+        llm = _get_node_llm(state)
+        response = await llm.ainvoke(messages)
+        content = str(response.content).strip()
+        if content.startswith("{") and content.endswith("}"):
+            if booking_deal:
+                response = AIMessage(content=verified_booking_text)
+    except Exception:
         if booking_deal:
-            content = (
-                f"### Booking Allocation Status Verified\n\n"
-                f"Here is the real-time status of your vehicle booking from our manufacturing plant:\n\n"
-                f"| Parameter | Allocation Detail |\n"
-                f"| :--- | :--- |\n"
-                f"| **Booking Reference** | `{booking_deal.get('Booking_ID', booking_query)}` |\n"
-                f"| **Deal Stage** | {booking_deal.get('Stage', 'Closed Won - Booking Done')} |\n"
-                f"| **Amount** | ₹{booking_deal.get('Amount', 0):,} |\n\n"
-                f"{booking_deal.get('Description', '')}\n\n"
-                f"Is there anything else regarding registration paperwork or balance payment you would like assistance with?"
+            response = AIMessage(content=verified_booking_text)
+        else:
+            response = AIMessage(
+                content=f"No booking found for '{booking_query}'. Please verify your booking reference #MAH-XXXX."
             )
-            response = AIMessage(content=content)
 
     return {"messages": [response], "tool_chips": tool_chips}
 

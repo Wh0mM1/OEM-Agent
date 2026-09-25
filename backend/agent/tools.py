@@ -57,6 +57,10 @@ async def create_lead_record(
         Literal["XUV700", "Thar", "Scorpio-N", "Bolero Neo"],
         "The specific Mahindra vehicle model the customer wishes to test drive or purchase.",
     ],
+    variant: Annotated[
+        Optional[str],
+        "Optional specific variant or trim name (e.g. 'AX7 Luxury (AX7L)', 'AX7L', 'Z8L').",
+    ] = None,
     company: Annotated[
         Optional[str],
         "Customer's company or buyer profile (e.g., 'Retail Customer', 'Corporate Fleet').",
@@ -78,6 +82,7 @@ async def create_lead_record(
         email: Valid email address.
         city: Customer's city/location.
         model_of_interest: Mahindra vehicle model.
+        variant: Specific variant or trim from vehicle catalog.
         company: Customer's company or buyer type.
         lead_source: Channel origin of the lead.
         lead_status: Current lifecycle status of the lead.
@@ -85,6 +90,28 @@ async def create_lead_record(
     parts = full_name.strip().split(" ", 1)
     first_name = parts[0]
     last_name = parts[1] if len(parts) > 1 else "Customer"
+
+    variant_details = vehicle_db.get_variant_details(model_of_interest, variant) if variant else None
+    if variant_details:
+        features_str = ", ".join(variant_details.get("key_features", []))
+        desc_lines = [
+            f"Test drive requested for Mahindra {model_of_interest}.",
+            f"Model: Mahindra {model_of_interest}",
+            f"Variant: {variant_details.get('name', variant)}",
+            f"Ex-Showroom Price: {variant_details.get('ex_showroom_price', 'N/A')}",
+            f"Transmission: {variant_details.get('transmission', 'N/A')}",
+            f"Seating: {variant_details.get('seating', 'N/A')} Seater",
+            f"Fuel Type: {variant_details.get('fuel_type', 'N/A')}",
+            f"Key Features: {features_str}",
+            f"Location: {city}. Sourced via AI Digital Concierge.",
+        ]
+        description = "\n".join(desc_lines)
+        model_display = f"{model_of_interest} - {variant_details.get('name', variant)}"
+    else:
+        summary = vehicle_db.get_vehicle_summary(model_of_interest)
+        price_range = summary.get("price_range", "") if summary else ""
+        description = f"Test drive requested for Mahindra {model_of_interest}. Price Range: {price_range}. Location: {city}. Sourced via AI Digital Concierge."
+        model_display = model_of_interest
 
     payload = {
         "First_Name": first_name,
@@ -95,8 +122,8 @@ async def create_lead_record(
         "Company": company or "Retail Customer",
         "Lead_Source": lead_source or "Mahindra AI Digital Showroom",
         "Lead_Status": lead_status or "New",
-        "Vehicle_Model_of_Interest": model_of_interest,
-        "Description": f"Test drive requested for Mahindra {model_of_interest}. Location: {city}. Sourced via AI Digital Concierge.",
+        "Vehicle_Model_of_Interest": model_display,
+        "Description": description,
     }
     result = await zoho_service.create_lead(payload)
     return json.dumps(result)

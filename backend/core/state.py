@@ -19,6 +19,7 @@ class SlotStore(TypedDict, total=False):
     email: Optional[str]
     city: Optional[str]
     model_interest: Optional[str]
+    variant_interest: Optional[str]
 
     # Service Slots
     registration_number: Optional[str]

@@ -124,6 +124,8 @@ class MockZohoClient:
         lead_id = f"LEAD-{uuid.uuid4().hex[:6].upper()}"
         phone = payload.get("Phone")
         enriched = dict(payload)
+        if "First_Name" in enriched and "Last_Name" in enriched and not enriched.get("Full_Name"):
+            enriched["Full_Name"] = f"{enriched['First_Name']} {enriched['Last_Name']}".strip()
 
         # CRM Interlink: annotate if existing customer contact exists
         if phone:
@@ -132,7 +134,7 @@ class MockZohoClient:
                 desc = enriched.get("Description", "")
                 enriched["Description"] = f"{desc} | [CRM Interlink: Existing Customer Contact #{contact['id']}]"
 
-        record = {"id": lead_id, **enriched, "Lead_Source": "AI Conversational Agent", "Lead_Status": "New"}
+        record = {"id": lead_id, **enriched, "Lead_Source": payload.get("Lead_Source", "Mahindra AI Digital Showroom"), "Lead_Status": "New"}
         self.leads[lead_id] = record
         return {"success": True, "lead_id": lead_id, "record": record}
 

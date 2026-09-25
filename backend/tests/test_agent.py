@@ -164,3 +164,40 @@ def test_rate_limiter_hourly_cap_and_byok():
     allowed, used, remaining = limiter.check_and_record(has_custom_key=True)
     assert allowed is True
 
+
+
+@pytest.mark.asyncio
+async def test_variant_detection_and_description_enrichment():
+    """Verify that variant like AX7L is recognized from DB and all variant details are stored in Description."""
+    text = "Tell me the price and features of the XUV700 AX7L, and book a test drive for Neha Kapoor, phone 9833445566, email neha.kapoor@example.com, Mumbai."
+    slots = extract_slots_from_text(text, {})
+
+    assert slots["name"] == "Neha Kapoor"
+    assert slots["phone"] == "9833445566"
+    assert slots["email"] == "neha.kapoor@example.com"
+    assert slots["city"] == "Mumbai"
+    assert slots["model_interest"] == "XUV700"
+    assert slots["variant_interest"] == "AX7 Luxury (AX7L)"
+
+    # Test lead creation tool call directly
+    res = await create_lead_record.ainvoke({
+        "full_name": slots["name"],
+        "phone": slots["phone"],
+        "email": slots["email"],
+        "city": slots["city"],
+        "model_of_interest": slots["model_interest"],
+        "variant": slots["variant_interest"],
+    })
+    data = json.loads(res)
+    assert data["success"] is True
+    lead_id = data["lead_id"]
+    lead = mock_zoho_client.leads[lead_id]
+    
+    desc = lead["Description"]
+    assert "Variant: AX7 Luxury (AX7L)" in desc
+    assert "₹23.99 Lakh" in desc
+    assert "Level-2 ADAS" in desc
+    assert "Sony 12-Speaker 3D Audio" in desc
+    assert "Diesel" in desc
+    assert "6-Speed Automatic" in desc
+    assert "7 Seater" in desc
