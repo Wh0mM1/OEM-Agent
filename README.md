@@ -361,55 +361,6 @@ To connect the agent to a free Zoho CRM developer account:
    ```
 6. **Populate `backend/.env`:** Paste `refresh_token`, `client_id`, `client_secret`, and `ZOHO_DC` into your `backend/.env` file and set `USE_MOCK_ZOHO=false`.
 
----
-
-## 8. Assessment Requirements Compliance Matrix
-
-| BRD Section | Evaluation Criteria | Implementation Details | Status |
-| :--- | :--- | :--- | :---: |
-| **Section 2** | Lifecycle: Stage 1 (New Lead) | Catalog lookup + `create_lead_record` in `Leads` with `Company: "Retail Customer"`, `Lead_Source: "Mahindra AI Digital Showroom"`, and `Vehicle_Model_of_Interest`. | ✅ **100%** |
-| **Section 2** | Lifecycle: Stage 2 (Ongoing Pipeline) | `lookup_deal_status` & `update_deal_status` in `Deals`; verifies Worli appointment and quote for Priya Patel; updates WhatsApp follow-up preference. | ✅ **100%** |
-| **Section 2** | Lifecycle: Stage 3 (Booked Vehicle) | `check_booking_status` in `Deals` (`Closed Won`); verifies booking `#MAH-9921` for Anand Rathi (VIN `MA1TA2SK5R8109921`, In Transit from Chakan). | ✅ **100%** |
-| **Section 2** | Lifecycle: Stage 4 (Service) | `log_service_ticket` in `Cases` with 3-way auto-interlinkage (`Deal_Name`, `Related_To`, `Account_Name`) and dynamic severity routing. | ✅ **100%** |
-| **Section 3** | Frontend Interface: React or Next.js | Modern React 18 + Vite + TypeScript + Tailwind CSS application (`/frontend`) featuring Claude/ChatGPT style threads, markdown tables, tool chips, and CRM drawer. | ✅ **100%** |
-| **Section 3** | LLM Orchestration & Tool Calling | LangGraph cyclical `StateGraph` with every-turn intent triage, slot extraction regex, domain tool layer, and `MemorySaver` checkpointer. | ✅ **100%** |
-| **Section 3** | Free / Open-Source Model Support | First-class configuration for **Groq** (`llama-3.3-70b-versatile`), **Google Gemini** (`gemini-2.5-flash-lite`), **OpenRouter** (free tier), and local **Ollama** (`llama3.2`). | ✅ **100%** |
-| **Section 3 & 4** | Zoho CRM OAuth 2.0 Integration | `zoho/token_manager.py` with multi-DC support (`.in`, `.com`, `.eu`), proactive token refresh (5 mins prior to expiry), memory caching, and 401 interception. | ✅ **100%** |
-| **Section 3** | State Management Across Turns | Thread-isolated multi-turn memory using LangGraph `thread_id` and browser `localStorage`, preventing state pollution across customer sessions. | ✅ **100%** |
-| **Section 4** | Pre-Populated CRM Seed Records | `seed_zoho.py` seeds Rajesh Sharma (Lead), Priya Patel (Deal & Contact), and Anand Rathi (Booking #MAH-9921 & Contact). | ✅ **100%** |
-| **Section 5** | Architecture Diagram & Loom Script | Complete Mermaid workflow diagram and turn-by-turn 5–7 minute Loom video script included in `README.md`. | ✅ **100%** |
-| **Section 6** | Automated Pytest Suite | 6/6 test cases passing in Pytest (`tests/test_agent.py`) covering slot extraction, catalog zero-hallucination, and relational CRM linkages. | ✅ **100%** |
-
----
-
-## 9. 5–7 Minute Loom Video Recording Script
-
-Follow this structured script during your technical demonstration:
-
-* **0:00 – 1:00 | Introduction & Architecture (Rubric: Design 30%, Code Quality 10%):**
-  - *"Hello! Today I'm presenting the Mahindra Automotive OEM Conversational AI Concierge. It is built using LangGraph for multi-stage intent orchestration, FastAPI, a Claude/ChatGPT-inspired React frontend, and a production integration with Zoho CRM REST API v8."*
-  - Highlight the **every-turn intent triage** and **zero-price hallucination** backed by the static `vehicles.json` database.
-  - Point out the multi-thread sidebar where each conversation maintains its own isolated `thread_id` and memory checkpointer.
-
-* **1:00 – 2:15 | Stage 1: New Lead Discovery (Rubric: Prompting 20%):**
-  - Prompt: *"Tell me the price of the XUV700 AX7L and book a test drive for Neha Kapoor, 9833445566, email neha.kapoor@example.com, Mumbai."*
-  - Show the authoritative spec breakdown and the green `Lead Created #...` status chip.
-  - Switch to Zoho CRM **Leads**: Show `Neha Kapoor` created with `Company: "Retail Customer"`, `Lead_Source: "Mahindra AI Digital Showroom"`, `Lead_Status: "New"`, and `Vehicle_Model_of_Interest: "Thar/XUV700"`.
-
-* **2:15 – 3:30 | Stage 2: Ongoing Pipeline & Preference Update:**
-  - Prompt: *"Can you check the test drive status for Priya Patel? Registered phone is 9819988776."*
-  - Show the retrieved quotation of ₹23,99,000 and the scheduled Worli dealership appointment.
-  - Follow-up: *"Please update my follow-up preference: contact me only on WhatsApp on Saturday morning."*
-  - Switch to Zoho CRM **Deals**: Show `Priya Patel - XUV700 AX7L` in stage `Proposal/Price Quote` with the updated WhatsApp follow-up preference in the Description.
-
-* **3:30 – 4:30 | Stage 3: Booked Vehicle Allocation Tracking:**
-  - Prompt: *"What is the delivery status of my booked Scorpio-N? Reference MAH-9921."*
-  - The agent recognizes stage `booked_vehicle`, verifies booking `#MAH-9921`, and returns VIN `MA1TA2SK5R8109921`, transit status from the Chakan plant, and October 8 delivery at the Andheri West showroom.
-
-* **4:30 – 5:45 | Stage 4: Post-Purchase Service & 3-Way CRM Auto-Linkage:**
-  - Mid-stream stage jump: *"My Scorpio-N needs a 15,000 km service. Reg number MH02CD1234, odometer 15000 km, phone 9822334455."*
-  - The agent detects `post_purchase_service`, resolves phone `9822334455` to customer **Anand Rathi** and deal `Booking #MAH-9921`, and logs the ticket.
-  - Switch to Zoho CRM **Cases**: Show that the case is created with all 3 relational lookups populated: **Deal Name** (`Booking #MAH-9921`), **Related To** (`Anand Rathi`), and **Account Name** (`Anand Rathi`).
 
 * **5:45 – 6:30 | OAuth 2.0 Token Manager & Wrap-up (Rubric: Zoho CRM 25%):**
   - Briefly open `backend/zoho/token_manager.py` to explain proactive token refresh (refreshes 5 minutes before expiration) and automatic 401 retry interceptor.
