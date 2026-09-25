@@ -360,8 +360,3 @@ To connect the agent to a free Zoho CRM developer account:
      -d "code=YOUR_GENERATED_CODE"
    ```
 6. **Populate `backend/.env`:** Paste `refresh_token`, `client_id`, `client_secret`, and `ZOHO_DC` into your `backend/.env` file and set `USE_MOCK_ZOHO=false`.
-
-
-* **5:45 – 6:30 | OAuth 2.0 Token Manager & Wrap-up (Rubric: Zoho CRM 25%):**
-  - Briefly open `backend/zoho/token_manager.py` to explain proactive token refresh (refreshes 5 minutes before expiration) and automatic 401 retry interceptor.
-  - Conclude the demo.
