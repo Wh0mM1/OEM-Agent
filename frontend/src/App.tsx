@@ -142,7 +142,7 @@ export default function App() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -154,34 +154,86 @@ export default function App() {
         }),
       });
 
-      const data = await res.json();
-      const detectedStage: StageType = data.active_stage || 'new_lead';
+      if (!res.body) return;
 
-      // If hourly shared limit reached, trigger custom key modal
-      if (data.requires_custom_key) {
-        setIsKeyModalOpen(true);
-      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedText = '';
+      let detectedStage: StageType = 'new_lead';
+      let currentToolChips: any[] = [];
+      const agentMsgId = `agt-${Date.now()}`;
 
-      const agentMessage: ChatMessage = {
-        id: `agt-${Date.now()}`,
-        sender: 'agent',
-        text: data.response,
-        stage: detectedStage,
-        tool_chips: data.tool_chips,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-
+      // Insert empty placeholder message for progressive streaming
       setThreads((prev) =>
         prev.map((t) =>
           t.id === activeThread.id
             ? {
                 ...t,
-                lastStage: detectedStage,
-                messages: [...t.messages, agentMessage],
+                messages: [
+                  ...t.messages,
+                  {
+                    id: agentMsgId,
+                    sender: 'agent',
+                    text: '',
+                    stage: 'new_lead',
+                    tool_chips: [],
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  },
+                ],
               }
             : t
         )
       );
+
+      // Stream incoming Server-Sent Events
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        const textChunk = decoder.decode(value);
+        const lines = textChunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const event = JSON.parse(line.slice(6));
+
+              if (event.type === 'meta') {
+                detectedStage = event.stage || 'new_lead';
+                currentToolChips = event.tool_chips || [];
+                if (event.requires_custom_key) {
+                  setIsKeyModalOpen(true);
+                }
+              } else if (event.type === 'chunk') {
+                accumulatedText += event.text;
+
+                setThreads((prev) =>
+                  prev.map((t) =>
+                    t.id === activeThread.id
+                      ? {
+                          ...t,
+                          lastStage: detectedStage,
+                          messages: t.messages.map((m) =>
+                            m.id === agentMsgId
+                              ? {
+                                  ...m,
+                                  text: accumulatedText,
+                                  stage: detectedStage,
+                                  tool_chips: currentToolChips,
+                                }
+                              : m
+                          ),
+                        }
+                      : t
+                  )
+                );
+              }
+            } catch (e) {
+              // Ignore partial chunk parsing
+            }
+          }
+        }
+      }
     } catch (err) {
       const errorMessage: ChatMessage = {
         id: `err-${Date.now()}`,
